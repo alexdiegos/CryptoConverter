@@ -8,10 +8,12 @@ import {
   View,
 } from 'react-native';
 import { ButtonGroup } from '@rneui/base'
+import fetch from 'cross-fetch';
 
 const App = () => {
   const buttons = ['BTC -> R$', 'R$ -> BTC']
-  const [cryptoToReal, setCrypto] = useState('');
+  const [updateValue, setUpdateValue] = useState(false);
+  const [crypto, setCrypto] = useState('');
   const [amount, setAmount] = useState('');
   const [typeConvert, setTypeConvert] = useState(0);
   const [resultado, setResultado] = useState('');
@@ -20,8 +22,27 @@ const App = () => {
     setTypeConvert(selectedIndex)
   }
 
+  const loadBTCValue = () => {
+    fetch('https://api.binance.com/api/v1/klines?symbol=BTCBRL&interval=1m&limit=5').then(res => {
+      if (res.status >= 400) {
+        throw new Error("Bad response from server");
+      }
+      return res.json();
+    })
+    .then(resp => {
+      const trades = resp.map(interval => parseFloat(interval[1]));
+      if(crypto == '' || updateValue) {
+        setCrypto('' + trades.slice(-1)[0]);
+        setUpdateValue(false)
+      }
+    })
+    .catch(err => {
+      console.error(err);
+    });
+  };
+
   const calculate = () => {
-    const tempCrypto = parseFloat(cryptoToReal);
+    const tempCrypto = parseFloat(crypto);
     const tempAmount = parseFloat(amount);
 
     if (typeConvert == 0) {
@@ -30,6 +51,7 @@ const App = () => {
       setResultado(tempAmount/tempCrypto + ' BTC');
     }
   }
+  loadBTCValue();
 
   return (
     <ImageBackground
@@ -43,7 +65,7 @@ const App = () => {
         style={{width: '60%', height: '20%', borderRadius: 15}}/>
       <Text style={{ fontSize: 16, color: "#000", fontWeight: 'bold', textAlign: 'center', marginTop: 20 }}>Saiba quanto em R$ seus Bitcoins valem, ou quantos Bitcoins você adquire com um valor X em reais</Text>
 
-      <TextInput onChangeText={(value) => setCrypto(value)} keyboardType="numeric" placeholder="Digite o valor de 1 BTC em R$" style={{ backgroundColor: '#fff', width: '90%', marginVertical: 5 }} />
+      <TextInput onChangeText={(value) => setCrypto(value)} defaultValue={crypto} keyboardType="numeric" placeholder="Digite o valor de 1 BTC em R$" style={{ backgroundColor: '#fff', width: '90%', marginVertical: 5 }} />
       <TextInput onChangeText={(value) => setAmount(value)} keyboardType="numeric" placeholder="Digite a quantidade que você deseja converter" style={{ backgroundColor: '#fff', width: '90%', marginVertical: 5 }} />
       <ButtonGroup
         onPress={updateIndex}
